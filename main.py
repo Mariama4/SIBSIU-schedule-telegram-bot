@@ -5,21 +5,25 @@ from pdf2image import convert_from_path
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
+import os
 
 TOKEN = "2015437517:AAGoA9bop5hHJp-7g6OjY86KLY-wtusHyyo"
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
+
 
 class CurrentSchedule(object):
     """docstring"""
 
     groupName = ''
     fileName = ''
+    fileLink = ''
 
-    def __init__(self, groupName = '', fileName = ''):
+    def __init__(self, groupName = '', fileName = '', fileLink = ''):
         """Constructor"""
         self.groupName = groupName
         self.fileName = fileName
+        self.fileLink = fileLink
 
 def getSchedule():
     local = 'https://www.sibsiu.ru/raspisanie/'
@@ -35,6 +39,7 @@ def getSchedule():
     dictOfSchedule = dict()
     listOfGroupName = []
     listOfFileName = []
+    localDir = os.getcwd()
     i = 0
 
     for link in links:
@@ -42,6 +47,10 @@ def getSchedule():
         groupName = pdfLink.split('/')[3]
         if groupName not in listOfGroupName:
             listOfGroupName.append(groupName)
+            try:
+                os.makedirs(localDir + pdfLink[0:18] + groupName + '/Расписание%20занятий')
+            except:
+                pass
         scheduleName = link.string
         resultLink = local + pdfLink
         resultLink = resultLink.replace(' ', '%20')
@@ -54,7 +63,7 @@ def getSchedule():
     return listOfGroupName, listOfFileName, dictOfSchedule
 
 def CheckLastModified(link):
-
+    CurrentSchedule.fileLink = link[21:]
     res = request.get(link)
     res.encoding = 'utf-8'
     lastModified = res.headers['Last-Modified'] # дата последнего обновления файла
@@ -62,12 +71,22 @@ def CheckLastModified(link):
     return lastModified , res
 
 def ConvertPDFtoPNG(res):
-    with open('main.pdf', 'wb') as f:
+    path = (os.getcwd() + CurrentSchedule.fileLink).replace('/','\\')
+    with open(path, 'wb') as f:
         f.write(res.content)
 
     popplerPath = "poppler-21.09.0\\Library\\bin"
-    images = convert_from_path('main.pdf', 300, poppler_path=popplerPath)
-    outputPath = 'raspisanie.png'
+    images = convert_from_path(path, 300, poppler_path=popplerPath)
+
+    outputList = path[41:].replace('\\','/').split('/')
+    outputList.pop(0)
+    outputList.pop(4)
+    outputPath = ''
+    for i, val in enumerate(outputList):
+        outputPath = outputPath + '/' + val
+
+    outputPath = outputPath + '/raspisanie.png'
+    outputPath = os.getcwd() + outputPath.replace('/','\\')
     images[0].save(outputPath )
 
     return outputPath
@@ -100,7 +119,6 @@ async def without_puree(message: types.Message):
     button = types.KeyboardButton(text='В начало')
     keyboard.add(button)
     f = False
-    date = ''
     caption = ''
     photo = ''
 
