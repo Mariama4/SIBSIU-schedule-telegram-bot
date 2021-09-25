@@ -48,6 +48,12 @@ def getSchedule():
         if groupName not in listOfGroupName:
             listOfGroupName.append(groupName)
             try:
+                os.makedirs(localDir + pdfLink.replace('/','\\'))
+                os.makedirs(localDir + pdfLink[0:18] + groupName + '/Очно-заочная%20форма%20обучения')
+                os.makedirs(localDir + pdfLink[0:18] + groupName + '/Расписание%20экзаменационной%20сессии')
+                os.makedirs(localDir + pdfLink[0:18] + groupName + '/Расписание%20промежуточной%20аттестации')
+                os.makedirs(localDir + pdfLink[0:18] + groupName + '/Заочная%20форма%20обучения%20(ускоренно)')
+                os.makedirs(localDir + pdfLink[0:18] + groupName + '/Заочная%20форма%20обучения')
                 os.makedirs(localDir + pdfLink[0:18] + groupName + '/Расписание%20занятий')
             except:
                 pass
