@@ -6,6 +6,9 @@ from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
 import os
+from aiogram.types import ReplyKeyboardRemove, \
+    ReplyKeyboardMarkup, KeyboardButton, \
+    InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = "2015437517:AAGoA9bop5hHJp-7g6OjY86KLY-wtusHyyo"
 bot = Bot(token=TOKEN)
@@ -33,20 +36,28 @@ def getSchedule():
     responceText = BeautifulSoup(response.text, 'lxml')
 
     links = responceText.find_all('li', class_='ul_file')
+    _listOfGroupNameRus = responceText.find_all('p', class_='p_title')
 
     local = local[0:-12]
 
     dictOfSchedule = dict()
     listOfGroupName = []
     listOfFileName = []
+    listOfGroupNameRus = []
     localDir = os.getcwd()
     i = 0
+    _i = 0
 
     for link in links:
         pdfLink = str(link).split('"')[3].replace('\\', '/')
         groupName = pdfLink.split('/')[3]
+        if _listOfGroupNameRus[_i].text == 'Институт физической культуры, здоровья и спорта':
+            _i += 1
+        groupNameRus = _listOfGroupNameRus[_i].text
         if groupName not in listOfGroupName:
             listOfGroupName.append(groupName)
+            listOfGroupNameRus.append(groupNameRus)
+            _i += 1
             try:
                 os.makedirs(localDir + pdfLink.replace('/','\\'))
                 os.makedirs(localDir + pdfLink[0:18] + groupName + '/Очно-заочная%20форма%20обучения')
@@ -66,7 +77,8 @@ def getSchedule():
         {'Group': {'Name': {f'{groupName}'}, 'Schedule Name': {f'{scheduleName}'}, 'Link': {f'{resultLink}'}}})
         i += 1
 
-    return listOfGroupName, listOfFileName, dictOfSchedule
+
+    return listOfGroupName, listOfFileName, dictOfSchedule, listOfGroupNameRus
 
 def CheckLastModified(link):
     CurrentSchedule.fileLink = link[21:]
@@ -97,22 +109,24 @@ def ConvertPDFtoPNG(res):
 
     return outputPath
 
-listOfGroupName, listOfFileName, dictOfSchedule = getSchedule()
+listOfGroupName, listOfFileName, dictOfSchedule, listOfGroupNameRus = getSchedule()
 
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    for i in listOfGroupName:
-        button = types.KeyboardButton(text=i)
+    for i, val in enumerate(listOfGroupName):
+        button = InlineKeyboardButton(text=listOfGroupNameRus[i], callback_data=val)
         keyboard.add(button)
     await message.reply(f'Привет,  {message.from_user.first_name} \nВыбери институт*:', reply_markup=keyboard)
 
-@dp.message_handler(lambda message: message.text in listOfGroupName)
+@dp.message_handler(lambda message: message.text in listOfGroupNameRus)
 async def without_puree(message: types.Message):
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    CurrentSchedule.groupName = message.text
+    numOfPos = listOfGroupNameRus.index(message.text)
+    result = listOfGroupName[numOfPos]
+    CurrentSchedule.groupName = result
     for i in dictOfSchedule:
-        if str(dictOfSchedule[i]['Group']['Name'])[2:-2] == message.text:
+        if str(dictOfSchedule[i]['Group']['Name'])[2:-2] == CurrentSchedule.groupName:
             button = types.KeyboardButton(text=str(dictOfSchedule[i]['Group']['Schedule Name'])[2:-2])
             keyboard.add(button)
 
@@ -154,17 +168,10 @@ async def cmd_dice(message: types.Message):
 @dp.message_handler(lambda message: message.text == "В начало")
 async def without_puree(message: types.Message):
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    for i in listOfGroupName:
-        button = types.KeyboardButton(text=i)
+    for i, val in enumerate(listOfGroupName):
+        button = InlineKeyboardButton(text=listOfGroupNameRus[i], callback_data=val)
         keyboard.add(button)
     await message.reply(f'Привет,  {message.from_user.first_name} \nВыбери институт*:', reply_markup=keyboard)
-
-@dp.message_handler(lambda message: message.text == "Дата обновления")
-async def without_puree(message: types.Message):
-    date =  CheckLastModified()[0] # [0] - дата обновления, [1] - .pdf файл
-    caption = f'Дата последнего обновления расписания на сайте сибгиу - {date}'
-    await bot.send_message( message.chat.id,
-                          caption)
 
 @dp.message_handler(content_types=['text'])
 async def get_text_messages(message: types.Message):
