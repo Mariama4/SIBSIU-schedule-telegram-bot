@@ -14,7 +14,7 @@ from aiogram.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "2015437517:AAGoA9bop5hHJp-7g6OjY86KLY-wtusHyyo"
+TOKEN = "***"
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 
